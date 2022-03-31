@@ -37,8 +37,8 @@ def retry(f, times=3):
 # In parallel threads, increment the value in the table.
 @retry
 def update_db_field():
-    con = sqlite3.connect(DATABASE_URL, timeout=60)
-    con.execute('PRAGMA busy_timeout = 60')
+    con = sqlite3.connect(DATABASE_URL)
+    con.execute('PRAGMA busy_timeout = 5')
     con.execute('PRAGMA journal_mode = WAL')
     con.execute('PRAGMA synchronous = NORMAL')
 
@@ -55,7 +55,7 @@ def update_db_field():
 
 futures = []
 with ThreadPoolExecutor(max_workers=10) as executor:
-    for _ in range(1000):
+    for _ in range(2000):
         futures.append(executor.submit(retry(update_db_field)))
 
 results = []

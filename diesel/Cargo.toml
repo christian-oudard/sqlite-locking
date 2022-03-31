@@ -1,0 +1,9 @@
+[package]
+name = "diesel_tutorial"
+version = "0.1.0"
+
+[dependencies]
+diesel = { version = "1.4.8", features = ["sqlite", "r2d2"] }
+diesel_migrations = "1.4.0"
+r2d2 = "0.8.9"
+rayon = "1.5.1"
