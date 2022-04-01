@@ -13,6 +13,7 @@ use diesel::prelude::*;
 
 use std::thread;
 use std::time::Duration;
+use std::thread::sleep;
 
 use diesel::connection::SimpleConnection;
 use diesel::r2d2::ConnectionManager;
@@ -70,7 +71,7 @@ fn main() {
         handles.push(thread::spawn(move || {
             let conn = pool.get().unwrap();
 
-            retry_transaction::<_, Error, _>(&conn, || {
+            transaction::<_, Error, _>(&conn, || {
                 let val = counter.select(value).get_result::<i64>(&conn).unwrap();
                 let mut val = val as u64;
                 val += 1;
@@ -91,19 +92,20 @@ fn main() {
     println!("{}", val);
 }
 
-pub fn retry_transaction<T, E, F>(conn: &PooledConnection<ConnectionManager<SqliteConnection>>, f: F) -> Result<T, E>
+const BASE_DELAY_MS: u32 = 10;
+const NUM_RETRIES:u32 = 5;
+
+pub fn transaction<T, E, F>(conn: &PooledConnection<ConnectionManager<SqliteConnection>>, f: F) -> Result<T, E>
 where
     F: Clone + FnOnce() -> Result<T, E>,
     E: From<Error>,
 {
-    for i in 0..5 {
+    for i in 0..NUM_RETRIES {
         let r = conn.immediate_transaction::<T, E, F>(f.clone());
-        if r.is_ok() || i == 4 {
+        if r.is_ok() || i == (NUM_RETRIES - 1) {
             return r;
-        } else {
-            std::thread::sleep(std::time::Duration::from_millis(1 * 2u64.pow(i)));
-            continue;
         }
+        sleep(Duration::from_millis((BASE_DELAY_MS * 2_u32.pow(i)) as u64));
     };
     panic!("Should never reach this point."); 
 }
